@@ -15,6 +15,11 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -22,6 +27,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText passwd;
     private FirebaseAuth auth;
     private FirebaseAuth.AuthStateListener authStateListener;
+    private String userUID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +43,7 @@ public class LoginActivity extends AppCompatActivity {
                if (user!=null) {
                    Log.d("onAuthStateChanged", "登入:"+
                            user.getUid());
-//                            userUID =  user.getUid();
+                   userUID =  user.getUid();
                }else{
                    Log.d("onAuthStateChanged", "已登出");
                }
@@ -46,6 +52,29 @@ public class LoginActivity extends AppCompatActivity {
        };
 
 
+    }
+
+    public void test(View v){
+        if (userUID!=null){
+//            addData();
+            FirebaseDatabase db = FirebaseDatabase.getInstance();
+            DatabaseReference userRef = db.getReference("users");
+            DatabaseReference friendsRef =
+                    userRef.child(userUID).child("friends").push();
+            Map<String, Object> friend = new HashMap<>();
+            friend.put("name", "Jack");
+            friend.put("phone", "1222333");
+            friendsRef.setValue(friend);
+            String friendId = friendsRef.getKey();
+            Log.d("FRIEND", friendId+"");
+        }
+    }
+
+    private void addData() {
+        FirebaseDatabase db = FirebaseDatabase.getInstance();
+        DatabaseReference ref = db.getReference("users");
+        ref.child(userUID).child("phone").setValue("9988877");
+        ref.child(userUID).child("address").setValue("Taipei");
     }
 
     @Override
