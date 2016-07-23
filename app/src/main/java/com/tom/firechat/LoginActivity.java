@@ -2,6 +2,7 @@ package com.tom.firechat;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -10,29 +11,53 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.api.Auth;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.auth.api.signin.GoogleSignInResult;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
 
+    private static final String TAG = "LoginActivity";
+    private static final int RC_GOOGLE_SIGN_IN = 100;
     private EditText userid;
     private EditText passwd;
     private FirebaseAuth auth;
     private FirebaseAuth.AuthStateListener authStateListener;
     private String userUID;
+    private GoogleSignInOptions gso;
+    private GoogleApiClient googleApiClient;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        gso = new
+                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.web_application_client_id))
+                .requestEmail()
+                .build();
+        googleApiClient = new GoogleApiClient.Builder(this)
+        .enableAutoManage(this, this)
+        .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+        .build();
+
+
         findViews();
         auth = FirebaseAuth.getInstance();
         //                            userUID =  user.getUid();
@@ -52,6 +77,52 @@ public class LoginActivity extends AppCompatActivity {
        };
 
 
+    }
+
+    public void google(View v){
+        Intent intent = Auth.GoogleSignInApi.getSignInIntent(googleApiClient);
+        startActivityForResult(intent, RC_GOOGLE_SIGN_IN);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == RC_GOOGLE_SIGN_IN){
+            GoogleSignInResult signInResult =
+                Auth.GoogleSignInApi.getSignInResultFromIntent(data);
+            if (signInResult.isSuccess()){
+                GoogleSignInAccount account = signInResult.getSignInAccount();
+                Log.d(TAG, "Google Sign-in 成功");
+                Log.d(TAG, "Google Sign-in :"+account.getDisplayName());
+                Log.d(TAG, "Google Sign-in :"+account.getEmail());
+                Log.d(TAG, "Google Sign-in :"+account.getIdToken());
+                firebaseAuthWithGoogle(account);
+
+            }else{
+                Log.d(TAG, "Google Sign-in 失敗");
+            }
+            /*if (resultCode == RESULT_OK){
+
+            }else{
+
+            }*/
+        }
+    }
+
+    private void firebaseAuthWithGoogle(GoogleSignInAccount account) {
+        Log.d(TAG, "firebaseAuthWithGoogle");
+        AuthCredential credential =
+                GoogleAuthProvider.getCredential(account.getIdToken(), null);
+        auth.signInWithCredential(credential)
+                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()){
+                            Toast.makeText(LoginActivity.this,
+                                    "Firebase登入成功", Toast.LENGTH_LONG).show();
+
+                        }
+                    }
+                });
     }
 
     public void test(View v){
@@ -135,5 +206,10 @@ public class LoginActivity extends AppCompatActivity {
     private void findViews() {
         userid = (EditText) findViewById(R.id.userid);
         passwd = (EditText) findViewById(R.id.passwd);
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.d(TAG, "onConnectionFailed");
     }
 }

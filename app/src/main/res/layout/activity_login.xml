@@ -49,4 +49,11 @@
         android:text="Test"
         android:id="@+id/button2"
         android:onClick="test" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Google登入"
+        android:id="@+id/button3"
+        android:onClick="google" />
 </LinearLayout>
