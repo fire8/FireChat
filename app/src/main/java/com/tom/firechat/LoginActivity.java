@@ -11,6 +11,13 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
@@ -21,6 +28,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
@@ -41,12 +49,40 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
     private String userUID;
     private GoogleSignInOptions gso;
     private GoogleApiClient googleApiClient;
+    private CallbackManager callback;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        FacebookSdk.sdkInitialize(getApplicationContext());
+
         setContentView(R.layout.activity_login);
+
+        LoginButton loginButton = (LoginButton) findViewById(R.id.button_facebook_login);
+        loginButton.setReadPermissions("email", "public_profile");
+        callback = CallbackManager.Factory.create();
+        loginButton.registerCallback(callback, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                Log.d(TAG, "onSuccess");
+                handleFacebookToken(loginResult);
+            }
+
+
+
+            @Override
+            public void onCancel() {
+                Log.d(TAG, "onSuccess");
+            }
+
+            @Override
+            public void onError(FacebookException error) {
+                Log.d(TAG, "onSuccess");
+            }
+        });
+
+
         gso = new
                 GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.web_application_client_id))
@@ -79,6 +115,24 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
 
     }
 
+    private void handleFacebookToken(LoginResult loginResult) {
+        AccessToken token = loginResult.getAccessToken();
+        AuthCredential credential =
+            FacebookAuthProvider.getCredential(token.getToken());
+        auth.signInWithCredential(credential)
+                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()){
+                            Toast.makeText(LoginActivity.this,
+                                    "Firebase/Facebook Sign In OK",Toast.LENGTH_LONG)
+                                    .show();
+
+                        }
+                    }
+                });
+    }
+
     public void google(View v){
         Intent intent = Auth.GoogleSignInApi.getSignInIntent(googleApiClient);
         startActivityForResult(intent, RC_GOOGLE_SIGN_IN);
@@ -105,6 +159,8 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
             }else{
 
             }*/
+        }else{ //facebook
+            callback.onActivityResult(requestCode, resultCode, data);
         }
     }
 
